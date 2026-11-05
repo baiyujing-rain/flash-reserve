@@ -1,0 +1,1 @@
+{"desc":"活动列表可索引，个人购买码不参与搜索","rules":[{"action":"allow","page":"pages/home/home"},{"action":"allow","page":"pages/event/event"},{"action":"disallow","page":"*"}]}

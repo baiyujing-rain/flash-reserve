@@ -1,0 +1,7 @@
+data
+artifacts
+.env
+node_modules
+.git
+miniprogram
+tests

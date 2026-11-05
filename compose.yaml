@@ -1,0 +1,34 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3210
+      FLASH_DEMO: 0
+      FLASH_DB: /app/data/production.db
+      TRUST_PROXY: 1
+    volumes:
+      - flash_data:/app/data
+    expose:
+      - "3210"
+    init: true
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      RESERVE_DOMAIN: ${RESERVE_DOMAIN:-reserve.example.com}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+volumes:
+  flash_data:
+  caddy_data:
+  caddy_config:
