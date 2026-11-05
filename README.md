@@ -2,6 +2,10 @@
 
 独立部署的门店快闪预约项目，包含运营后台、原生微信小程序、H5 预约验收页与 SQLite 预约服务。业务源码完整可编辑，无内置授权服务、加密源码、域名绑定或软件年费。详见 [源码交付说明](SOURCE-OWNERSHIP.md)。
 
+[![CI](https://github.com/baiyujing-rain/flash-reserve/actions/workflows/ci.yml/badge.svg)](https://github.com/baiyujing-rain/flash-reserve/actions/workflows/ci.yml)
+
+公开仓库：[baiyujing-rain/flash-reserve](https://github.com/baiyujing-rain/flash-reserve)。[需求核对与待验项](docs/REQUIREMENTS-AUDIT.md) · [本地验收记录](VERIFICATION.md)。GitHub 托管源码和自动测试，正式预约服务需部署到自己的服务器。
+
 当前状态：本地可运行交付版。真实微信登录、手机号授权、订阅消息送达、小程序审核和目标服务器验收需要门店自己的微信账号与部署环境；未冒充已上线系统。短信为可选扩展，当前未接入。**没有在线支付**，购买码是预约成功后的到店凭证。
 
 ## 本地启动
@@ -9,7 +13,8 @@
 需要 **Node.js 24+**，没有 npm 第三方依赖，无需运行 npm install。
 
 ```powershell
-cd D:\Zcodex_project1\flash-reserve
+git clone https://github.com/baiyujing-rain/flash-reserve.git
+cd flash-reserve
 npm run demo
 ```
 
@@ -55,6 +60,7 @@ npm run demo
 - 预约写入在独立工作线程完成，不占用 HTTP 状态查询线程。每进程写入排队上限 2000，满时显式返回重试提示；数据库条件更新支持多个进程共用本机同一 DB。
 - **数据库必须位于本机持久化磁盘**，不把 WAL 数据库放在 NFS/SMB 或多个容器不同卷。水平扩展至多台服务器时需迁移到共享事务数据库，并重新压测。
 - 核销与撤销核销不增加库存；撤销仅恢复购买码待核销状态。
+- 写入线程完成初始化才报告健康，意外退出会拒绝在途请求并自动重启；客户端可使用原请求标识重试。每小时清理过期会话和过期一天的限流计数，业务记录保留。
 
 ## 验证
 
@@ -74,9 +80,13 @@ node scripts/load-test.mjs --viewers
 1. 复制 `.env.example` 为 `.env`，填写至少 12 位随机管理员密码、门店自己的微信 AppID/AppSecret、`PUBLIC_ORIGIN=https://实际域名`。不提交 `.env`，不在小程序源码中写 AppSecret。
 2. `FLASH_DEMO=0`，使用全新的生产库。首次运行创建管理员；之后不会用环境变量覆盖已有账号密码。
 3. 本机部署：`npm start`。服务默认仅监听本机，由自有 HTTPS 反向代理转发。需要 `HOST=0.0.0.0` 时仅在可信网络或代理后使用。
-4. Docker 示例：`.env` 增加 `RESERVE_DOMAIN=实际域名`，将域名解析到服务器，开放 80/443，执行 `docker compose up -d --build`。后台 Cookie 在配置 HTTPS origin 后为 Secure。**Docker 示例已提供，当前未运行 Docker 实测。**
+4. Docker 示例：`.env` 增加 `RESERVE_DOMAIN=实际域名`，将域名解析到服务器，开放 80/443，执行 `docker compose up -d --build`。后台 Cookie 在配置 HTTPS origin 后为 Secure。**镜像构建与生产容器启动已由 GitHub CI 验证；Caddy HTTPS 和域名仍需目标环境验收。**
 5. 数据放在持久卷 `flash_data`；在门店系统中定期下载备份或运行 `scripts/backup.mjs`，备份另存其他磁盘/对象存储。按实际业务确定备份频率与保留期限。
 6. 微信公众平台配置 HTTPS request 合法域名，按门店实际情况填写用户隐私保护指引、联系方式、数据保留期限与权限用途。
+
+反向代理：直连时保持 `TRUST_PROXY=0`，服务忽略客户端自带的转发头。仅在应用端口不对外、流量都经过可信反向代理时设 `TRUST_PROXY=1`；提供的 Compose 已按这一拓扑配置。后台登录与小程序登录独立限流，小程序默认每 IP 每分钟 2000 次，避免同一门店 Wi-Fi 的 1000 个用户被合并误拦；可在系统设置调整。
+
+GitHub 自动测试：每次 push、pull request 或手动触发，执行 Windows/Linux 源码及业务检查、1000 人抢号与 1000 页面轮询、Linux Docker 构建和生产模式启动验证。仅上传合成测试的 JSON 指标，不上传数据库、日志、`.env` 或凭据。共享 CI 环境的性能结果不等于门店生产网络 SLA。
 
 无软件年费不代表零运营支出：域名、服务器、微信平台认证/接口及可选短信费用由对应平台计费；本源码没有授权续费机制。预算 3 万元内建议先采用当前单店版本，短信、在线支付、多门店与多机集群另行评估。
 
