@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm run check
+      - run: npm run check:publication
+      - run: npm test
+
+  load:
+    name: Concurrency and release timing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: node scripts/load-test.mjs --viewers
+      - name: Keep synthetic test metrics only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: concurrency-metrics
+          path: |
+            artifacts/load-result.json
+            artifacts/viewer-result.json
+          retention-days: 14
+
+  container:
+    name: Production container smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: docker build -t flash-reserve:ci .
+      - name: Start isolated production service
+        run: |
+          docker run -d --name flash-reserve-ci \
+            -p 127.0.0.1:3210:3210 \
+            -e FLASH_ADMIN_PASSWORD="$(openssl rand -hex 24)" \
+            -e PUBLIC_ORIGIN=http://127.0.0.1:3210 \
+            flash-reserve:ci
+      - name: Check readiness and disabled demo authentication
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3210/api/health; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:3210/api/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' -d '{}' \
+            http://127.0.0.1:3210/api/auth/demo)" = 404
+      - if: failure()
+        run: docker logs flash-reserve-ci
+      - if: always()
+        run: docker rm -f flash-reserve-ci
