@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish source release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package the tracked source tree
+        run: |
+          git archive --format=zip --prefix=shanyu-flash-reserve/ \
+            -o shanyu-flash-reserve-source.zip HEAD
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }} · 山屿快闪门店预约系统源码
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## 交付内容
+
+            | 附件 | 说明 |
+            | --- | --- |
+            | `shanyu-flash-reserve-source.zip` | 本 tag 的完整源码（不含运行数据库与压测产物） |
+            | Source code | GitHub 自动生成的 zip / tar.gz |
+
+            ## 快速开始
+
+            ```powershell
+            npm run demo
+            ```
+
+            需要 Node.js 24+，无第三方依赖。管理后台 <http://127.0.0.1:3210>，用户端 <http://127.0.0.1:3210/book>。
+
+            ## 说明
+
+            - 演示模式仅监听本机，正式部署必须关闭演示模式，详见 README。
+            - 本软件为商业交付物，保留所有权利，详见 LICENSE。
+          files: |
+            shanyu-flash-reserve-source.zip

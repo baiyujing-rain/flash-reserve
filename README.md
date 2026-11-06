@@ -3,6 +3,7 @@
 独立部署的门店快闪预约项目，包含运营后台、原生微信小程序、H5 预约验收页与 SQLite 预约服务。业务源码完整可编辑，无内置授权服务、加密源码、域名绑定或软件年费。详见 [源码交付说明](SOURCE-OWNERSHIP.md)。
 
 [![CI](https://github.com/baiyujing-rain/flash-reserve/actions/workflows/ci.yml/badge.svg)](https://github.com/baiyujing-rain/flash-reserve/actions/workflows/ci.yml)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 公开仓库：[baiyujing-rain/flash-reserve](https://github.com/baiyujing-rain/flash-reserve)。[需求核对与待验项](docs/REQUIREMENTS-AUDIT.md) · [本地验收记录](VERIFICATION.md)。GitHub 托管源码和自动测试，正式预约服务需部署到自己的服务器。
 
@@ -146,3 +147,9 @@ deploy/          自部署 HTTPS 代理示例
 data/            运行数据库（忽略提交）
 artifacts/       压测数据、实测结果和截图（忽略提交）
 ```
+
+## 许可
+
+本软件为商业交付物，**保留所有权利（All rights reserved）**，详见 [LICENSE](LICENSE)。
+取得交付授权的客户可在自有门店业务中使用、修改并部署；未经书面许可不得复制、
+分发或转售。商业授权请通过仓库 Issue 联系。
